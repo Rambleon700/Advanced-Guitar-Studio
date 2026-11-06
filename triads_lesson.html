@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="theme-color" content="#1c3f94"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Triads: The Logic Behind Every Shape</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#ffffff;color:#111111;font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button,select,input{font:inherit;color:inherit}button{cursor:pointer}
+:focus-visible{outline:3px solid #c8102e;outline-offset:2px}
+header{background:#ffffff;border-bottom:5px solid #1c3f94;box-shadow:0 4px 0 #c8102e;padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+h1{font-size:18px;margin:0;color:#1c3f94;letter-spacing:.5px}h2{font-size:16px;margin:0 0 8px;color:#1c3f94}
+.stats{font-size:12px;color:#555b6b}.stats b{color:#c8102e}
+nav{display:flex;gap:6px;flex-wrap:wrap;padding:14px 16px 10px;background:#ffffff}
+nav button,.btn{background:#eef1f6;border:1px solid #b9c2d6;border-radius:8px;padding:7px 14px;color:#111111}
+nav button.on,.btn.on{background:#1c3f94;color:#ffffff;border-color:#1c3f94;font-weight:700}
+.btn:hover,nav button:hover{border-color:#c8102e}.btn.pri{background:#c8102e;color:#ffffff;font-weight:700;border-color:#c8102e}
+.btn:disabled{opacity:.5;cursor:default}
+main{max-width:1000px;margin:0 auto;padding:16px}
+.card{background:#ffffff;border:1px solid #c5cbd8;border-left:5px solid #1c3f94;border-radius:12px;padding:14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(28,63,148,.12)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.muted{color:#555b6b;font-size:13px}.chip{padding:5px 11px;border-radius:999px;background:#eef1f6;border:1px solid #b9c2d6;font-size:13px;color:#111111}
+.chip.cur{background:#c8102e;color:#ffffff;border-color:#c8102e;font-weight:700}.chip.dim{opacity:.45}
+.cell{width:54px;height:54px;border-radius:8px;border:1px solid #b9c2d6;background:#eef1f6;font-weight:700;font-size:18px;color:#111111}
+.cell.act{background:#dbe6ff;border-color:#1c3f94;color:#1c3f94}.cell.now{box-shadow:0 0 0 3px #c8102e;border-color:#c8102e}
+pre{background:#f4f6fa;border:1px solid #c5cbd8;border-radius:8px;padding:10px;overflow:auto;margin:8px 0;font:13px/1.35 ui-monospace,Menlo,Consolas,monospace;color:#111111}
+.big{font-size:42px;font-weight:800;color:#1c3f94;font-variant-numeric:tabular-nums}
+.good{color:#1a7f37}.bad{color:#c8102e}svg{max-width:100%;height:auto}
+input[type=range]{accent-color:#c8102e;width:180px}select{background:#ffffff;border:1px solid #b9c2d6;border-radius:8px;padding:6px;color:#111111}
+.fbcell{cursor:pointer}.fbcell:hover{fill:rgba(28,63,148,.18)}
+</style></head><body>
+<header><h1>TRIADS: THE LOGIC BEHIND EVERY SHAPE</h1><div class="stats">A guitar lesson in eight parts</div></header>
+<main id="main"></main>
+<script>
+(function(){
+'use strict';
+var NOTES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+var OPEN=[40,45,50,55,59,64]; /* low E to high e */
+var SN=['low E','A','D','G','B','high e'];
+var S={};
+/* ---------- audio: Karplus-Strong plucked string ---------- */
+var AC=null,master=null,cache={};
+function ac(){if(!AC){var C=window.AudioContext||window.webkitAudioContext;AC=new C();master=AC.createGain();master.gain.value=.8;var c=AC.createDynamicsCompressor();master.connect(c);c.connect(AC.destination)}
+ if(AC.state==='suspended')AC.resume();return AC}
+function ksBuf(m){if(cache[m])return cache[m];var sr=AC.sampleRate,f=440*Math.pow(2,(m-69)/12),N=Math.max(2,Math.round(sr/f)),len=Math.floor(sr*2.4),
+ b=AC.createBuffer(1,len,sr),d=b.getChannelData(0),L=new Float32Array(N),i,p=0,pv=0,dec=m<52?.9985:.997;
+ for(i=0;i<N;i++){var r=Math.random()*2-1;L[i]=(r+pv)*.5;pv=r}
+ for(i=0;i<len;i++){var a=L[p],q=L[(p+1)%N];L[p]=(a+q)*.5*dec;d[i]=a*.6;p=(p+1)%N}
+ cache[m]=b;return b}
+function pluck(m,when,vel){ac();var s=AC.createBufferSource(),g=AC.createGain(),lp=AC.createBiquadFilter();s.buffer=ksBuf(m);
+ lp.type='lowpass';lp.frequency.value=2600+vel*3000;g.gain.value=vel;s.connect(lp);lp.connect(g);g.connect(master);s.start(when||AC.currentTime)}
+function click(when,acc){ac();var o=AC.createOscillator(),g=AC.createGain();o.frequency.value=acc?1500:1000;g.gain.setValueAtTime(.15,when);g.gain.exponentialRampToValueAtTime(.0001,when+.05);o.connect(g);g.connect(master);o.start(when);o.stop(when+.06)}
+/* ---------- Triad Lab ---------- */
+var TR=['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'],LET='CDEFGAB',NAT=[0,2,4,5,7,9,11];
+var TQ={maj:['Major',[0,4,7],'4 + 3 semitones',['R','3','5']],min:['Minor',[0,3,7],'3 + 4 semitones',['R','b3','5']],dim:['Diminished',[0,3,6],'3 + 3 semitones',['R','b3','b5']],aug:['Augmented',[0,4,8],'4 + 4 semitones',['R','3','#5']]};
+var SETS=[[3,4,5],[2,3,4],[1,2,3],[0,1,2]],SETN=['Strings 1-2-3 (e B G)','Strings 2-3-4 (B G D)','Strings 3-4-5 (G D A)','Strings 4-5-6 (D A E)'],INVN=['Root position','1st inversion','2nd inversion'];
+S.tl={r:9,q:'min',set:0,inv:0,vi:0,ex:0,dr:null,rev:false};
+function rpc(n){return(NAT[LET.indexOf(n.charAt(0))]+(n.charAt(1)==='#'?1:n.charAt(1)==='b'?-1:0)+12)%12}
+function spell(rn,q){var li=LET.indexOf(rn.charAt(0)),rp=rpc(rn),o={n:[],p:[]},k,d,l;
+ for(k=0;k<3;k++){l=(li+2*k)%7;var pc=(rp+TQ[q][1][k])%12;d=(pc-NAT[l]+12)%12;o.n.push(LET.charAt(l)+(d===0?'':d===1?'#':d===2?'##':d===11?'b':'bb'));o.p.push(pc)}return o}
+function findV(pcs,inv,set){var ord=[inv%3,(inv+1)%3,(inv+2)%3],out=[],fb,i,m,f,fs,prev,ok;
+ for(fb=0;fb<=17;fb++){prev=OPEN[set[0]]+fb;if(prev%12!==pcs[ord[0]])continue;fs=[fb];ok=true;
+  for(i=1;i<3;i++){m=prev+1;while(m%12!==pcs[ord[i]])m++;f=m-OPEN[set[i]];if(f<0){m+=12;f+=12}if(f>17)ok=false;fs.push(f);prev=m}
+  if(ok&&Math.max.apply(null,fs)-Math.min.apply(null,fs)<=5)out.push(fs)}return out}
+function invOf(set,fs,pcs){var b=(OPEN[set[0]]+fs[0])%12;return pcs.indexOf(b)}
+function fbDots(dots){var s='<svg viewBox="0 0 960 200" width="100%" role="img" aria-label="Fretboard showing triad voicings"><rect x="40" y="14" width="900" height="156" fill="#eef1f6"/>',f,r,i,W=52;
+ for(f=0;f<=17;f++){var x=40+f*W;s+='<line x1="'+x+'" x2="'+x+'" y1="14" y2="170" stroke="'+(f===0?'#111111':'#8a93a8')+'" stroke-width="'+(f===0?5:2)+'"/>';if(f)s+='<text x="'+(x-W/2)+'" y="190" text-anchor="middle" font-size="11" fill="#555b6b">'+f+'</text>'}
+ [3,5,7,9,15,17].forEach(function(m){s+='<circle cx="'+(40+(m-.5)*W)+'" cy="92" r="4" fill="#c5cbd8"/>'});s+='<circle cx="'+(40+11.5*W)+'" cy="66" r="4" fill="#c5cbd8"/><circle cx="'+(40+11.5*W)+'" cy="118" r="4" fill="#c5cbd8"/>';
+ for(r=0;r<6;r++){var y=27+r*26,si=5-r;s+='<line x1="40" x2="940" y1="'+y+'" y2="'+y+'" stroke="#555b6b" stroke-width="'+(1+si*.3)+'"/><text x="6" y="'+(y+4)+'" font-size="11" fill="#555b6b">'+SN[si]+'</text>'}
+ for(i=0;i<dots.length;i++){var d=dots[i],cx=d.f===0?22:40+(d.f-.5)*W,cy=27+(5-d.s)*26,fill=d.k===0?'#c8102e':d.k===1?'#1c3f94':'#ffffff',tc=d.k===2?'#1c3f94':'#ffffff';
+  s+='<g opacity="'+(d.sel?1:.3)+'"><circle cx="'+cx+'" cy="'+cy+'" r="'+(d.sel?11:9)+'" fill="'+fill+'" stroke="'+(d.sel?'#111111':'#1c3f94')+'" stroke-width="'+(d.sel?2.5:1.5)+'"/><text x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle" font-size="'+(d.sel?11:9)+'" font-weight="700" fill="'+tc+'">'+d.t+'</text></g>'}
+ return s+'</svg>'}
+function dotsFor(sp,set,vs,sel,inv){var ord=[inv%3,(inv+1)%3,(inv+2)%3],o=[],i,j;
+ for(i=0;i<vs.length;i++)if(i!==sel)for(j=0;j<3;j++)o.push({s:set[j],f:vs[i][j],k:ord[j],t:sp.n[ord[j]],sel:0});
+ if(vs[sel])for(j=0;j<3;j++)o.push({s:set[j],f:vs[sel][j],k:ord[j],t:sp.n[ord[j]],sel:1});return o}
+function tab3(set,fs){var L=['e','B','G','D','A','E'],o='',r,j;for(r=0;r<6;r++){var si=5-r,t='-';for(j=0;j<3;j++)if(set[j]===si)t=''+fs[j];o+=L[r]+'|--'+t+(t.length<2?'-':'')+'--|\n'}return o}
+function playV(set,fs,arp){var t=ac().currentTime+.05,j;for(j=0;j<3;j++)pluck(OPEN[set[j]]+fs[j],t+j*(arp?.35:.02),.85)}
+var EXC=[['Am','A','min',[5,5,5]],['D','D','maj',[7,7,5]],['G','G','maj',[7,8,7]],['Em','E','min',[9,8,7]]];
+function vTriad(){var T=S.tl,sp=spell(TR[T.r],T.q),Q=TQ[T.q],set=SETS[T.set],i,k,s;
+ var vs=findV(sp.p,T.inv,set);if(T.vi>=vs.length)T.vi=0;
+ s='<div class="card"><h2>1. What a triad is</h2><p>A triad is three notes stacked in thirds: a <b>root</b>, a <b>3rd</b> and a <b>5th</b>. Its character comes from how the two thirds are sized:</p><ul><li><b>Major</b> = major 3rd (4 semitones) + minor 3rd (3 semitones).</li><li><b>Minor</b> = minor 3rd (3) + major 3rd (4).</li></ul><p>The 5th is always 7 semitones above the root. Only the middle note moves, so <b>minor = major with the 3rd lowered one fret</b>. Name the notes by skipping letters (A, C, E; F, A, C): that is why D♭ major is D♭ F A♭ and never C♯ E♯ G♯.</p></div>';
+ s+='<div class="card"><h2>2. Triad calculator</h2><div class="row">';for(i=0;i<12;i++)s+='<button class="btn'+(i===T.r?' on':'')+'" data-a="tr" data-v="'+i+'">'+TR[i]+'</button>';
+ s+='</div><div class="row" style="margin:8px 0">';['maj','min','dim','aug'].forEach(function(q){s+='<button class="btn'+(T.q===q?' on':'')+'" data-a="tq" data-v="'+q+'">'+TQ[q][0]+'</button>'});
+ s+='</div><div class="row" style="justify-content:center;margin:10px 0">';for(k=0;k<3;k++)s+='<div style="text-align:center"><div class="muted">'+Q[3][k]+'</div><span class="big">'+sp.n[k]+'</span></div>'+(k<2?'<span class="muted">+'+(Q[1][k+1]-Q[1][k])+'</span>':'');
+ s+='</div><p class="muted">'+TR[T.r]+' '+Q[0].toLowerCase()+' = root, then '+Q[2]+'. Count the frets to check any spelling.</p></div>';
+ s+='<div class="card"><h2>3. Why shapes change: the string sets</h2><p>Open strings are tuned E-A-D-G-B-e. Adjacent gaps in semitones: <b>5, 5, 5, 4, 5</b>. The odd one out is G to B (4). The same finger pattern on two strings is therefore a fret out whenever it crosses G and B.</p><ul class="muted"><li>Strings 4-5-6 and 3-4-5 have gaps 5,5: they share a shape.</li><li>Strings 2-3-4 (gaps 5,4) and 1-2-3 (gaps 4,5) each have their own shapes.</li></ul></div>';
+ s+='<div class="card"><h2>4. Inversions: the bass note decides the name</h2><p><b>Root position</b> has the root lowest (R-3-5). <b>1st inversion</b> has the 3rd lowest (3-5-R). <b>2nd inversion</b> has the 5th lowest (5-R-3). The notes above the bass do not change the name.</p><h2>5. Four steps for any triad</h2><ol><li>Spell it: root, 3rd, 5th (use the calculator).</li><li>Pick a string set and an inversion; that fixes the bottom-to-top order.</li><li>Find the bass note on the lowest string.</li><li>Climb: on each next string take the nearest chord tone above, in order. Frets should fit in about five.</li></ol></div>';
+ s+='<div class="card"><h2>6. Triad explorer: '+TR[T.r]+(T.q==='maj'?'':T.q==='min'?'m':T.q==='dim'?'°':'+')+'</h2><div class="row">';for(i=0;i<4;i++)s+='<button class="btn'+(i===T.set?' on':'')+'" data-a="tset" data-v="'+i+'">'+SETN[i]+'</button>';
+ s+='</div><div class="row" style="margin:8px 0">';for(i=0;i<3;i++)s+='<button class="btn'+(i===T.inv?' on':'')+'" data-a="tinv" data-v="'+i+'">'+INVN[i]+'</button>';
+ var ord=[T.inv%3,(T.inv+1)%3,(T.inv+2)%3];s+='</div><p class="muted">Bottom to top: <b>'+ord.map(function(x){return sp.n[x]+' ('+Q[3][x]+')'}).join(' - ')+'</b>. Bright dots are the chosen position; faded dots show every other place this inversion lives. <span style="color:#c8102e"><b>Red = root</b></span>, <span style="color:#1c3f94"><b>blue = 3rd</b></span>, white = 5th.</p><div class="row">';
+ for(i=0;i<vs.length;i++)s+='<button class="btn'+(i===T.vi?' on':'')+'" data-a="tvi" data-v="'+i+'">Frets '+vs[i].join('-')+'</button>';
+ s+='</div>'+fbDots(dotsFor(sp,set,vs,T.vi,T.inv));
+ if(vs.length){s+='<pre>'+tab3(set,vs[T.vi])+'</pre><div class="row"><button class="btn pri" data-a="tplay" data-v="0">Chord</button><button class="btn" data-a="tplay" data-v="1">Arpeggio</button></div>'}
+ s+='</div>';
+ /* worked example */
+ var E=EXC[T.ex],es=spell(E[1],E[2]),ei=invOf(SETS[0],E[3],es.p),dots=[],j;
+ for(j=0;j<3;j++){var pc=(OPEN[SETS[0][j]]+E[3][j])%12;dots.push({s:SETS[0][j],f:E[3][j],k:es.p.indexOf(pc),t:es.n[es.p.indexOf(pc)],sel:1})}
+ s+='<div class="card"><h2>7. Worked example: Am, D, G, Em in the 5th-9th fret box</h2><p class="muted">The notes and frets in your original chart are all right. The inversion <b>names</b> were each one step out, because the name follows the bass note. Check any chord below and the lab names it for you.</p><div class="row">';
+ for(i=0;i<4;i++)s+='<button class="btn'+(i===T.ex?' on':'')+'" data-a="tex" data-v="'+i+'">'+EXC[i][0]+'</button>';
+ s+='<button class="btn pri" data-a="tloop">▶ Play loop</button></div>'+fbDots(dots)+'<p><b>'+E[0]+'</b>: e'+E[3][2]+' B'+E[3][1]+' G'+E[3][0]+' gives <b>'+[2,1,0].map(function(x){return es.n[es.p.indexOf((OPEN[SETS[0][x]]+E[3][x])%12)]}).join(' - ')+'</b> from the top, with bass <b>'+es.n[es.p.indexOf((OPEN[3]+E[3][0])%12)]+'</b> on the G string. That is <b>'+INVN[ei].toLowerCase()+'</b>.</p>';
+ s+='<table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th></th>'+INVN.map(function(x){return'<th style="text-align:left">'+x+'</th>'}).join('')+'</tr>';
+ EXC.forEach(function(c){var sp2=spell(c[1],c[2]);s+='<tr style="border-top:1px solid #c5cbd8"><td style="padding:5px"><b>'+c[0]+'</b></td>';for(i=0;i<3;i++){var v2=findV(sp2.p,i,SETS[0]).filter(function(f){return Math.max.apply(null,f)<=14});s+='<td>'+v2.map(function(f){return'e'+f[2]+' B'+f[1]+' G'+f[0]}).join(' / ')+'</td>'}s+='</tr>'});
+ s+='</table><p class="muted">Verified by the algorithm. Am 1st inversion (5-5-5), D root (5-7-7), G 2nd (7-8-7) and Em root (7-8-9) is the smooth, five-fret loop: every voice moves by one to two frets.</p></div>';
+ /* drill */
+ s+='<div class="card"><h2>8. Drill</h2><div class="row"><button class="btn pri" data-a="tdr">New question</button></div>';
+ if(T.dr){var ds=spell(T.dr.r,T.dr.q);s+='<p><b>Spell '+T.dr.r+' '+TQ[T.dr.q][0].toLowerCase()+'.</b> Then name its 1st inversion bass.</p><button class="btn" data-a="trev">'+(T.rev?'Hide':'Reveal')+'</button>';if(T.rev)s+='<p class="good"><b>'+ds.n.join(' - ')+'</b>. 1st inversion bass: <b>'+ds.n[1]+'</b>.</p>'}
+ return s+'</div>'}
+
+function render(){document.getElementById('main').innerHTML=vTriad()}
+document.addEventListener('click',function(e){var el=e.target,a,v;while(el&&el!==document&&!el.getAttribute('data-a'))el=el.parentNode;if(!el||el===document)return;a=el.getAttribute('data-a');v=el.getAttribute('data-v');ac();
+ if(a==='tr'){S.tl.r=+v;S.tl.vi=0;render()}
+ else if(a==='tq'){S.tl.q=v;S.tl.vi=0;render()}
+ else if(a==='tset'){S.tl.set=+v;S.tl.vi=0;render()}
+ else if(a==='tinv'){S.tl.inv=+v;S.tl.vi=0;render()}
+ else if(a==='tvi'){S.tl.vi=+v;render()}
+ else if(a==='tplay'){var T2=S.tl,sp3=spell(TR[T2.r],T2.q),vv=findV(sp3.p,T2.inv,SETS[T2.set]);if(vv[T2.vi])playV(SETS[T2.set],vv[T2.vi],v==='1')}
+ else if(a==='tex'){S.tl.ex=+v;render();playV(SETS[0],EXC[+v][3],false)}
+ else if(a==='tloop'){var t0=ac().currentTime+.05,ii;for(ii=0;ii<8;ii++){var f2=EXC[ii%4][3],jj;for(jj=0;jj<3;jj++)pluck(OPEN[SETS[0][jj]]+f2[jj],t0+ii*.9+jj*.02,.8)}}
+ else if(a==='tdr'){S.tl.dr={r:TR[Math.floor(Math.random()*12)],q:Math.random()<.5?'maj':'min'};S.tl.rev=false;render()}
+ else if(a==='trev'){S.tl.rev=!S.tl.rev;render()}});
+render();
+
+})();
+</script></body></html>
